@@ -1,11 +1,42 @@
 lconf_version"0.1"
-local lua = project"lua";
-
-"lzio.c", "lctype.c", "lopcodes.c", "lmem.c", "lundump.c", "ldump.c", "lstate.c",
-"lgc.c", "llex.c", "lcode.c", "lparser.c", "ldebug.c", "lfunc.c", "lobject.c", "ltm.c", "lstring.c", ltable.c
-ldo.c lvm.c lapi.c  lzio.h lctype.h lopcodes.h lmem.h lundump.h lstate.h
-lgc.h llex.h lcode.h lparser.h ldebug.h lfunc.h lobject.h ltm.h lstring.h
-ltable.h ldo.h lvm.h lapi.h
+local lua = project"lua"
+    :languages{require"C"}
 
 
-local lua_objects = lua:compile{}
+local lua_objects = lua:compile{"lzio.c", "lctype.c", "lopcodes.c", "lmem.c", "lundump.c", "ldump.c", "lstate.c",
+    "lgc.c", "llex.c", "lcode.c", "lparser.c", "ldebug.c", "lfunc.c", "lobject.c", "ltm.c", "lstring.c", "ltable.c",
+    "ldo.c", "lvm.c", "lapi.c",  "lzio.h", "lctype.h", "lopcodes.h", "lmem.h", "lundump.h", "lstate.h",
+    "lgc.h", "llex.h", "lcode.h", "lparser.h", "ldebug.h", "lfunc.h", "lobject.h", "ltm.h", "lstring.h",
+    "ltable.h", "ldo.h", "lvm.h", "lapi.h"}
+
+local luastd_libs = options.with"lua-stdlib":default{"coro", "db", "io", "math", "os", "str", "tab", "utf8"}:value()
+
+local luastd_objects;
+
+if luastd_libs then
+    local lua_std_files = {"loadlib.c", "linit.c", "lbaselib.c"};
+    for _,v in ipairs(luastd_libs) do
+       table.insert(lua_std_files,"l"..v.."lib.c")
+    end
+    luastd_objects = lua:compile(lua_std_files);
+end
+
+local lua_static= lua
+    :library("lua",lconf.library_type.static)
+    :link{lua_objects,luastd_objects}
+    :install"lib";
+
+if options.enable"luac":get() then
+    lua:executable"luac"
+    :link{lua_objects,"luac.c"}
+    :install"bin";
+end
+
+if options.enable"lua-interpret":get() then
+   lua:executable"lua"
+    :link{"lua.c"}
+    :link_library{lua_static }
+    :install"bin";
+end
+
+return lua
