@@ -27,14 +27,33 @@ if(LUA_STDLIB)
 endif()
 
 
-add_library(lua-static STATIC $<TARGET_OBJECTS:lua_objects> $<TARGET_OBJECTS:luastd>)
+add_library(lua-static STATIC $<TARGET_OBJECTS:lua_objects> $<$<BOOL:${LUA_STDLIB}>:$<TARGET_OBJECTS:luastd>>)
+
+install(TARGETS lua-static EXPORT lua
+        DESTINATION lib)
+
+if(NOT WIN32)
+    target_link_libraries(lua-static m dl)
+endif()
 
 if(LUA_BUILD_LUAC)
     add_executable(luac luac.c $<TARGET_OBJECTS:lua_objects>)
     target_link_libraries(luac lua_objects)
+    if(NOT WIN32)
+        target_link_libraries(luac m dl)
+    endif()
+    install(TARGETS luac
+            DESTINATION bin)
 endif()
 
 if(LUA_BUILD_INTERP)
     add_executable(lua lua.c)
     target_link_libraries(lua lua-static)
+    install(TARGETS lua
+            DESTINATION bin)
 endif()
+
+install(EXPORT lua
+        DESTINATION lib/cmake/
+        NAMESPACE lua::
+        )
